@@ -1,0 +1,17 @@
+--extra-index-url https://download.pytorch.org/whl/cu128
+torch==2.11.0+cu128
+numpy==2.2.6
+liger-kernel==0.8.0
+triton==3.6.0
+xformers==0.0.35
+mashumaro
+datasets==4.8.5
+lm-eval==0.4.12
+click
+typing-extensions
+einops
+wandb
+transformers==5.3.0
+safetensors
+tqdm
+pytest

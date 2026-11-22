@@ -1,0 +1,82 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "python": "python",
+
+            // Running with 2 GPUs
+            "program": "torchrun",
+            "args": [
+                "--nproc_per_node=2",
+                "--master-port", "29524",
+                "src/train.py",
+                "--model_config_name", "Tfm", // Model
+                "--optim_config_name", "Tfm", // Optim
+                "--trainer_config_name", "Tfm", // Trainer 
+            ],
+            "env": {
+                "CUDA_LAUNCH_BLOCKING": "1",
+                "CUDA_VISIBLE_DEVICES": "0,1",
+            },
+
+
+
+            // Train starting from step 22,500 for the checkpoint
+            // named "Tfm". Reset wandb so we have a new run name
+            // and use 2 devices.
+            // "program": "torchrun",
+            // "args": [
+            //     "--nproc_per_node=2",
+            //     "--master-port", "29524",
+            //     "src/train_from_cp.py",
+            //     "--model_save_path", "model_ckpts/Tfm/",
+            //     "--step", "22_500",
+            //     "--reset_wandb",
+            //     "--num_devices", "2"
+            // ],
+            // "env": {
+            //     "CUDA_LAUNCH_BLOCKING": "1",
+            //     "CUDA_VISIBLE_DEVICES": "0,1",
+            // },
+
+            
+            // Run inference with the Tfm model for
+            // a given prompt.
+            // "program": "src/infer.py",
+            // "args": [
+            //     "--prompt", "hello there 1 + 2 equals",
+            //     "--model_save_path", "model_ckpts/Tfm/",
+            //     "--step", "5_000",
+            //     "--device", "cuda:0",
+            //     "--num_decode_steps", "100",
+            //     "--early_stop"
+            // ],
+            // "env": {
+            //     "CUDA_LAUNCH_BLOCKING": "1",
+            //     "CUDA_VISIBLE_DEVICES": "2,3",
+            // },
+
+
+            // Run a specified set of evals on the Tfm checkpoint
+            // at checkpoint number 25,000
+            // "program": "src/eval.py",
+            // "args": [
+            //     "--model_save_path", "model_ckpts/Tfm/",
+            //     "--eval_names", "humaneval,mbpp,triviaqa,nq_open",
+            //     "--step", "25_000",
+            //     "--device", "cuda:0",
+            // ],
+            // "env": {
+            //     "CUDA_LAUNCH_BLOCKING": "1",
+            //     "CUDA_VISIBLE_DEVICES": "2,3",
+            // },
+
+
+            "console": "integratedTerminal",
+            "justMyCode": false
+        }
+    ]
+}
