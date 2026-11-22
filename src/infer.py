@@ -1,11 +1,12 @@
 # Huggingface is annoying
-from src.utils import init_hf_path
+from src.init_hf_path import init_hf_path
 init_hf_path()
 
 import torch
 from typing import Optional
 import click
 from src.model.Model import load_model_for_inf
+from tqdm import tqdm
 
 
 
@@ -32,11 +33,13 @@ def main(
     assert sampling_strategy in ["sample", "greedy"]
     
     # Load in the model
+    print("Loading model...")
     model = load_model_for_inf(
         model_save_path=model_save_path,
         step=step,
         device=device
     )
+    print("Model loaded")
     
     # Tokenize prompt
     input_ids = model.tokenizer.encode(
@@ -51,42 +54,46 @@ def main(
     
     
     # Decode loop
+    print("Generating...")
     num_dec = 0
-    while True:
-        # Model fwd pass
-        logits = model.forward(
-            inputs=torch.tensor(
-                input_ids,
-                dtype=torch.long,
-                device=device,
-            ), 
-            cu_seqlens=cu_seqlens,
-            return_loss=False,
-        )
-        
-        # Sample next token
-        if sampling_strategy == "sample":
-            next_tok = torch.distributions.Categorical(
-                probs = logits.softmax(-1)
-            ).sample()
-        elif sampling_strategy == "greedy":
-            next_tok = logits.argmax(-1)
-        else:
-            raise NotImplementedError
-        
-        # Add to cur seq
-        input_ids.append(next_tok)
-        cu_seqlens[-1] += 1
-        
-        
-        num_dec += 1
-        
-        # Stop decoding if we hit a stop token
-        # or have decoded to the decode limit
-        if num_decode_steps is not None and num_dec > num_decode_steps:
-            break
-        if early_stop and next_tok == model.tokenizer.eos_token_id:
-            break
+    with tqdm(total=num_decode_steps, desc="Processing") as pbar:
+        while True:
+            # Model fwd pass
+            logits = model.forward(
+                inputs=torch.tensor(
+                    input_ids,
+                    dtype=torch.long,
+                    device=device,
+                ), 
+                cu_seqlens=cu_seqlens,
+                return_loss=False,
+            )
+            
+            # Sample next token
+            if sampling_strategy == "sample":
+                next_tok = torch.distributions.Categorical(
+                    probs = logits.softmax(-1)
+                ).sample()
+            elif sampling_strategy == "greedy":
+                next_tok = logits.argmax(-1)
+            else:
+                raise NotImplementedError
+            
+            # Add to cur seq
+            input_ids.append(next_tok)
+            cu_seqlens[-1] += 1
+            
+            
+            num_dec += 1
+            
+            # Stop decoding if we hit a stop token
+            # or have decoded to the decode limit
+            if num_decode_steps is not None and num_dec > num_decode_steps:
+                break
+            if early_stop and next_tok == model.tokenizer.eos_token_id:
+                break
+
+            pbar.update(1)
     
     print(model.tokenizer.decode(input_ids))
     

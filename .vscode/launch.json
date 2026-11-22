@@ -5,10 +5,10 @@
             "name": "Python: Current File",
             "type": "debugpy",
             "request": "launch",
-            "python": "python",
+            "python": "TTVenv/bin/python",
 
             // Running with 2 GPUs
-            "program": "torchrun",
+            "program": "TTVenv/bin/torchrun",
             "args": [
                 "--nproc_per_node=2",
                 "--master-port", "29524",
@@ -27,7 +27,7 @@
             // Train starting from step 22,500 for the checkpoint
             // named "Tfm". Reset wandb so we have a new run name
             // and use 2 devices.
-            // "program": "torchrun",
+            // "program": "TTVenv/bin/torchrun",
             // "args": [
             //     "--nproc_per_node=2",
             //     "--master-port", "29524",
@@ -49,10 +49,11 @@
             // "args": [
             //     "--prompt", "hello there 1 + 2 equals",
             //     "--model_save_path", "model_ckpts/Tfm/",
-            //     "--step", "5_000",
+            //     "--step", "22_500",
             //     "--device", "cuda:0",
             //     "--num_decode_steps", "100",
-            //     "--early_stop"
+            //     "--early_stop",
+            //     "--sampling_strategy", "greedy"
             // ],
             // "env": {
             //     "CUDA_LAUNCH_BLOCKING": "1",
@@ -65,7 +66,7 @@
             // "program": "src/eval.py",
             // "args": [
             //     "--model_save_path", "model_ckpts/Tfm/",
-            //     "--eval_names", "humaneval,mbpp,triviaqa,nq_open",
+            //     "--eval_names", "hellaswag,piqa,arc_easy,arc_challenge,race,humaneval,mbpp,triviaqa,nq_open",
             //     "--step", "25_000",
             //     "--device", "cuda:0",
             // ],

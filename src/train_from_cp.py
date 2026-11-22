@@ -1,5 +1,5 @@
 # Huggingface is annoying
-from src.utils import init_hf_path
+from src.init_hf_path import init_hf_path
 init_hf_path()
 
 import torch

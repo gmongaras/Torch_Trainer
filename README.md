@@ -25,7 +25,7 @@ Then, create a venv for this repo with `python3 -m venv TTVenv`. Activate the ve
 
 I also use wandb. Download wandb with `pip install wandb` then do `wandb login` to login to wandb.
 
-I have performed a training run using the script described in [Model Training](#model-training). The wandb for this run is located [here](https://forge.coreweave.com/wandb/gmongaras1/Torch_Trainer/workspace) and the checkpoint is uploaded to huggingface [here]()
+I have performed a training run using the script described in [Model Training](#model-training). The wandb for this run is located [here](https://forge.coreweave.com/wandb/gmongaras1/Torch_Trainer/workspace) and the checkpoint is uploaded to huggingface [here](https://huggingface.co/gmongaras/Torch_Trainer_Tfm)
 
 
 # Features
@@ -103,35 +103,75 @@ Note that all losses are automatically added together with their corresponding w
 
 ## Checkpoint Reloading
 
+If your model crashes or you want to keep training a model, you can reload the model from a checkpoint by using the `src/train_from_cp.py` script.
 
+To restart the Tfm model from step 22_500, run the following:
+```
+nnodes=1
+nproc_per_node=2
+model_config="Tfm"
+optim_config="Tfm"
+trainer_config="Tfm"
+torchrun \
+    --nnodes $nnodes \
+    --nproc_per_node $nproc_per_node \
+    --rdzv_id $RANDOM \
+    --rdzv_backend c10d \
+    src/train_from_cp.py \
+    --model_save_path "model_ckpts/Tfm/" \
+    --step "22_500" \
+    --reset_wandb \
+    --num_devices 2
+```
 
-
-
-
-
-
-
-
+Most params are self explanatory. Adding the `--reset_wandb` flag resets the wandb id s.t. the wandb id for the run is different from the saved wandb id. This appears as a new instance in wandb, starting from whatever checkpoint step was saved. `--num_devices <N>` is an optional flag that can be used to change the number of devices from whatever the checkpoint was originally trained with the the new value. 
 
 
 
 
 ## Checkpoint Inference
 
+Inference can be done with a pretrained checkpoint with the following:
+```
+python src/infer.py \
+    --prompt "hello there 1 + 2 equals" \
+    --model_save_path "model_ckpts/Tfm/" \
+    --step 25_000 \
+    --device cuda:0 \
+    --num_decode_steps 100 \
+    --early_stop \
+    --sampling_strategy sample
+```
 
-
-
-
-
-
-
-
+This just performs normal inference as you would expect. The following describes each param:
+- `prompt` - A string the model starts decoding from.
+- `model_save_path` - Path to the checkpoint to load.
+- `step` - Step number to load.
+- `device` - Device to do inference on.
+- `num_decode_steps` - Number of tokens to decode. Model has a hard stop when it generates this number of tokens.
+- `early_stop` - If the flag is supplied, the model will stop when it hits a stop token. Otherwise, it generates until it hits `num_decode_steps`
+- `sampling_strategy` - Can either be `sample` to sample each next token or `greedy` to take the token with the highest prob on each decode step.
 
 
 
 ## Checkpoint Eval
 
+To evaluate a model on downstream evals, run the following script:
+```
+python src/eval.py \
+    --model_save_path "model_ckpts/Tfm/" \
+    --step 25_000 \
+    --device cuda:0 \
+    --eval_names hellaswag,piqa,arc_easy,arc_challenge,race,humaneval,mbpp,triviaqa,nq_open
+```
 
+This evaluates the 25_000 checkpoint of the Tfm model on device 0 on the specified evals. Params are as follows:
+- `model_save_path` - Path to the checkpoint to load.
+- `step` - Step number to load.
+- `device` - Device to do inference on.
+- `eval_names` - Comma separated list of registered evals. Look in the `src/eval.py` script to see all the registered evals. You can add more than are in here.
+
+To add an eval, note that you have to specify the `score_names` which are the names of the eval scores to report, the number of shots with `num_shots` and the `task_type` as either prefill or decode.
 
 
 
@@ -147,13 +187,81 @@ Note that all losses are automatically added together with their corresponding w
 
 ### Adding metrics
 
-Metrics are useful to
+Metrics are useful to debug your model. The metrics interface can be found in `src/model/Metrics.py`. Metrics can be added in any layer and can be added with the following:
+```
+metrics.add_metric(
+    section_name="section_name", 
+    metric_name="metric_name",
+    metric_value=42,
+    reduce_op=ReduceOp.AVG,
+)
+```
+The code above adds a metric named `metric_name` under the section `section_name`. It is a value of 42 and the reduction op is an average. The metric name is the name of the graph that will show up in wandb and the section name is the name of the section said metric will be under in wandb. The metric value is whatever value to log this step. The reduce op is indicative of how to reduce across ranks. For example the loss should be `ReduceOp.AVG` but the total number of trained tokens should be `ReduceOp.SUM`.
+
+The `metric_value` can be a scalar or a vector. If the value is a vector, we can plot a histogram via the following:
+```
+metrics.add_metric(
+    section_name="section_name", 
+    metric_name="histogram_metric",
+    metric_value=torch.randn(10),
+    reduce_op=ReduceOp.AVG,
+    histogram=True,
+)
+```
+
+The histogram was particularly useful for me when debugging MoE. Below shows what the graphs look like for a scalar, vector, and vector histogram:
+![scalar vs vector vs histogram](imgs/s_v_h.png)
+
+`section_names` can be defined when initializing a `Metrics` object. The current codebase does this before each forward pass. If a section name is specified that is not specified on initialization of the object, and error will occur. By default, the `section_names` are:
+- `General` - Includes info like loss and number of trained tokens.
+- `Losses` - Includes all added losses from [Adding losses](#adding-losses).
+- `Timing` - Includes all added timing spans as noted in [Adding timing spans](#adding-timing-spans).
+- `Grad_Norm` - Includes grad norm for each param.
+
+
+So that you don't have repetitive back to back `.add` calls, multiple metrics can be added at the same time like the following:
+```
+metrics.add_metrics(
+    "section_name",
+    metric_name1=Metric(...),
+    metric_name2=Metric(...),
+    ...
+)
+```
+This adds `metric_name1` and `metric_name2` under the section `section_name` and is equivalent to the following:
+```
+metrics.add_metric(
+    section_name="section_name", 
+    metric_name="metric_name1",
+    ...
+)
+metrics.add_metric(
+    section_name="section_name", 
+    metric_name="metric_name2",
+    ...
+)
+```
+
+Metrics are automatically logged to wandb when `log_dist` is called, which happens after each bwd pass.
 
 
 
 ### Adding timing spans
 
-Timing spans allow you to see how long a section of code is taking. The timing interface can be found in ``.
+Timing spans allow you to see how long a section of code is taking. The timing interface can be found in `src/model/Timing.py`. A timing span must be started and ended like the following for the attn section:
+```
+timing.start_span("attn")
+
+<attn code>
+
+timing.end_span("attn")
+```
+
+When a timing span is started, the time is saved and when it ends, the total time between the start and end is saved to a vector. To get timing data, use `timing.get_span_total("span_name")` to get the additive total across the saved timings vector and `timing.get_span_avg("span_name")` to get the average across the saved timings vector.
+
+For one off ops such as taking an optimizer step, the vector is a single scalar so the reduction doesn't do anything. If you want to profile a layer, for example attention, you likely want to see the average or total time this takes across the entire model fwd/bwd pass so you can compare it with the other layers. Thus the need for a vector reduction as the vector accumulates timings until reset, which happens before each fwd pass.
+
+The function `get_all_span_totals` is used by the trainer to get all the span totals and log them as metrics. This way, you will see any span added with the above code appear under `Timing` in wandb.
 
 
 
@@ -173,4 +281,6 @@ The layer interface can be found in `src/model/layers/Layer.py`. All layers inhe
 - `timing` - Optional timing as described in [Metrics and Timing](#metrics-and-timing)
 - `losses` - Optional losses as described in [Adding Losses](#adding-losses)
 - `cache` - A dictionary that allows you to add stuff from one layer and use it in a future layer. For example, let's say I need to calculate something once for all layers and said computation is somewhat expensive and doesn't need to be differentiable. I can have the first layer do the expensive operation and add it to the cache, then all future layers can pull the cached output from the cache. Not used in this repo but it works and I found it quite useful.
-- inf_cfg: Optional[InfConfig] = None - Object used for inference as described in [Checkpoint Inference](#checkpoint-inference).
+- `inf_cfg` - Object used for inference as described in [Checkpoint Inference](#checkpoint-inference).
+
+To count the number of parameters in a model, each layer reports the number of params in said layer via `num_params` and the number of active params with `num_active`. The latter being useful for layers like MoE.

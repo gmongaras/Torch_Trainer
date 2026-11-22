@@ -8,7 +8,6 @@ from safetensors.torch import load_file
 
 from src.configs import ModelConfig
 from src.model.layers.TransformerLayer import TransformerLayer
-from src.exp_configs import ModelConfigs
 from liger_kernel.ops.fused_linear_cross_entropy import LigerFusedLinearCrossEntropyFunction
 from src.model.fast_ce import fast_linear_cross_entropy
 from src.utils import (
@@ -24,12 +23,6 @@ from src.model.Losses import Losses, dummy_losses
 from src.model.Timing import Timing, dummy_timing
 from src.utils import find_highest_step
 from src.types import InfMode
-
-
-
-
-if "DEBUG" in os.environ and not bool(int(os.environ["DEBUG"])):
-    from src.model.LigerCE import LigerFusedLinearCrossEntropyFunction_fwd
 
 
 layer_config_map = {

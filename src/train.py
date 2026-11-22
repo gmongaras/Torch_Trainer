@@ -1,8 +1,7 @@
 # Huggingface is annoying
-from src.utils import init_hf_path
+from src.init_hf_path import init_hf_path
 init_hf_path()
 
-import sys
 from distributed_helpers import is_main_process
 from src.Trainer import Trainer
 from src.exp_configs import (
