@@ -173,6 +173,21 @@ This evaluates the 25_000 checkpoint of the Tfm model on device 0 on the specifi
 
 To add an eval, note that you have to specify the `score_names` which are the names of the eval scores to report, the number of shots with `num_shots` and the `task_type` as either prefill or decode.
 
+I ran the eval job on the [25000 transformer checkpoint](https://huggingface.co/gmongaras/Torch_Trainer_Tfm/tree/main/25000). The results are found in runjob_eval.out:
+```
+hellaswag accuracy: 33.00
+piqa accuracy: 64.09
+arc easy accuracy: 40.10
+arc challenge accuracy: 24.57
+race accuracy: 28.32
+humaneval score: 0.00
+mbpp score: 0.00
+triviaqa score: 0.95
+natural questions score: 0.64
+```
+
+These scores follow [DeepSeekMoe](https://arxiv.org/abs/2401.06066) and should be compared to the dense model in Table 1. Note that I trained on significantly less data so I could train on 2 GPUs. If you train on a batch size of 4 million tokens (2048 bs * 2048 seq len), then you will get similar results (which I have confirmed on 16 GPUs).
+
 
 
 

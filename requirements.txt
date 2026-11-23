@@ -15,3 +15,4 @@ transformers==5.3.0
 safetensors
 tqdm
 pytest
+accelerate==1.14.0

@@ -1,7 +1,6 @@
 #!/bin/bash
 
-#SBATCH -A eclarson_sm_taylor_0001
-#SBATCH --job-name="torch_trainer"
+#SBATCH --job-name="torch_trainer_train"
 #SBATCH -p batch
 #SBATCH -o runjob.out
 #SBATCH --nodes=1
@@ -20,8 +19,6 @@ trainer_config="Tfm"
 nnodes=1
 # Number of tasks per node
 nproc_per_node=2
-# Conda environment name to activate
-env_name=TTVenv
 run_ip=20000
 
 
@@ -41,8 +38,7 @@ head_node_ip=$(srun --nodes=1 --ntasks=1 -w "$head_node" hostname --ip-address)
 echo Node IP: $head_node_ip
 export LOGLEVEL=INFO
 
-source ~/.bashrc
-srun torchrun \
+srun TTVenv/bin/torchrun \
     --nnodes $nnodes \
     --nproc_per_node $nproc_per_node \
     --rdzv_id $RANDOM \
@@ -54,7 +50,7 @@ srun torchrun \
     --trainer_config_name $trainer_config
 
 # # cp reload
-# srun torchrun \
+# srun TTVenv/bin/torchrun \
 #     --nnodes $nnodes \
 #     --nproc_per_node $nproc_per_node \
 #     --rdzv_id $RANDOM \
