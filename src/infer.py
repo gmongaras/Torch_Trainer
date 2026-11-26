@@ -7,6 +7,8 @@ from typing import Optional
 import click
 from src.model.Model import load_model_for_inf
 from tqdm import tqdm
+from src.types import InfMode
+from src.configs import InfConfig
 
 
 
@@ -52,30 +54,48 @@ def main(
         device=device,
     )
     
+
+    # First iter config
+    inf_cfg = InfConfig(
+        # Doing prefill
+        inf_mode=InfMode.PREFILL,
+        # We want to cache KVs
+        update_cache=[True,],
+        # Reset cache from previous fwd pass
+        reset_cache=True
+    )
+
     
     # Decode loop
     print("Generating...")
     num_dec = 0
-    with tqdm(total=num_decode_steps, desc="Processing") as pbar:
+    with tqdm(total=num_decode_steps, desc="Generating") as pbar:
         while True:
             # Model fwd pass
             logits = model.forward(
                 inputs=torch.tensor(
-                    input_ids,
+                    (
+                        input_ids
+                        if inf_cfg.inf_mode == InfMode.PREFILL
+                        else [input_ids[-1]]
+                    ),
                     dtype=torch.long,
                     device=device,
                 ), 
-                cu_seqlens=cu_seqlens,
+                cu_seqlens=(
+                    cu_seqlens
+                ),
                 return_loss=False,
+                inf_cfg=inf_cfg,
             )
             
             # Sample next token
             if sampling_strategy == "sample":
                 next_tok = torch.distributions.Categorical(
-                    probs = logits.softmax(-1)
+                    probs = logits[-1].softmax(-1)
                 ).sample()
             elif sampling_strategy == "greedy":
-                next_tok = logits.argmax(-1)
+                next_tok = logits[-1].argmax(-1)
             else:
                 raise NotImplementedError
             
@@ -92,6 +112,15 @@ def main(
                 break
             if early_stop and next_tok == model.tokenizer.eos_token_id:
                 break
+
+            # Now doing decode and want to keep
+            # the cache
+            inf_cfg = InfConfig(
+                inf_mode=InfMode.DECODE,
+                # Don't update the KV cache for done sequences
+                update_cache=[True,],
+                reset_cache=False
+            )
 
             pbar.update(1)
     

@@ -131,8 +131,6 @@ Most params are self explanatory. Adding the `--reset_wandb` flag resets the wan
 
 ## Checkpoint Inference
 
-Note: Currently inference is not using the KV cache. Will fix in a few days when I have access to GPUs again.
-
 Inference can be done with a pretrained checkpoint with the following:
 ```
 python src/infer.py \

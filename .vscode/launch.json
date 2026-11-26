@@ -49,7 +49,7 @@
             // "args": [
             //     "--prompt", "hello there 1 + 2 equals",
             //     "--model_save_path", "model_ckpts/Tfm/",
-            //     "--step", "22_500",
+            //     "--step", "25_000",
             //     "--device", "cuda:0",
             //     "--num_decode_steps", "100",
             //     "--early_stop",
@@ -57,7 +57,7 @@
             // ],
             // "env": {
             //     "CUDA_LAUNCH_BLOCKING": "1",
-            //     "CUDA_VISIBLE_DEVICES": "2,3",
+            //     "CUDA_VISIBLE_DEVICES": "0,1",
             // },
 
 
@@ -72,7 +72,7 @@
             // ],
             // "env": {
             //     "CUDA_LAUNCH_BLOCKING": "1",
-            //     "CUDA_VISIBLE_DEVICES": "2,3",
+            //     "CUDA_VISIBLE_DEVICES": "0,1",
             // },
 
 

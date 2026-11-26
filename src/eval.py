@@ -11,7 +11,6 @@ import lm_eval
 from lm_eval.models.huggingface import HFLM
 import click
 from dataclasses import dataclass
-from enum import Enum
 from src.types import InfMode
 from src.configs import InfConfig
 
